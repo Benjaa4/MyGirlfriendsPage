@@ -386,7 +386,7 @@ export const HomeView = () => {
               className="pointer-events-auto cursor-grab active:cursor-grabbing w-auto max-w-[80%] rounded-full px-6 py-3 bg-[#FDFBF7]/40 backdrop-blur-xl border border-[#6B1D2F]/15 shadow-sm"
             >
               <p className="font-sans font-light text-[13px] text-text-main/90 text-center truncate">
-                "{notita.texto}"
+                "{notita.text || notita.texto}"
               </p>
             </motion.div>
           ))}
@@ -437,7 +437,7 @@ export const HomeView = () => {
                       >
                         <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 w-full flex items-center justify-center">
                           <p className="font-sans font-light text-[15px] text-text-main/90 text-center leading-relaxed italic w-full">
-                            "{notita.texto}"
+                            "{notita.text || notita.texto}"
                           </p>
                         </div>
                       </div>

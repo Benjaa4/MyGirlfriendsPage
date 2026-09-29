@@ -21,9 +21,14 @@ export const cartasApi = {
   
   async saveCarta(carta) {
     if (!supabase) throw new Error("Supabase no configurado");
-    const { data, error } = await supabase.from('cartas').upsert(carta).select();
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase.from('cartas').upsert(carta).select();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error Supabase al guardar carta:", error);
+      throw error;
+    }
   },
   
   async deleteCarta(id) {
@@ -96,9 +101,14 @@ export const notitasApi = {
 
   async saveNotita(notita) {
     if (!supabase) throw new Error("Supabase no configurado");
-    const { data, error } = await supabase.from('notitas').upsert(notita).select();
-    if (error) throw error;
-    return data;
+    try {
+      const { data, error } = await supabase.from('notitas').upsert(notita).select();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error Supabase al guardar notita:", error);
+      throw error;
+    }
   },
 
   async deleteNotita(id) {

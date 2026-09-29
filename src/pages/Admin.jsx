@@ -148,7 +148,46 @@ export const AdminPanel = () => {
 
 const CartasAdmin = () => {
   const [items, setItems] = useState([]);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [fecha, setFecha] = useState('');
+  const [status, setStatus] = useState('draft');
+
   useEffect(() => { cartasApi.getCartas().then(setItems).catch(console.error); }, []);
+
+  const handleSave = async () => {
+    if (!title || !content || !fecha) return alert("Completa todos los campos");
+    try {
+      await cartasApi.saveCarta({
+        title,
+        content,
+        fecha: new Date(fecha).toISOString(),
+        status
+      });
+      alert("Carta guardada correctamente");
+      setTitle('');
+      setContent('');
+      setFecha('');
+      setStatus('draft');
+      const updated = await cartasApi.getCartas();
+      setItems(updated);
+    } catch (error) {
+      console.error("Error Supabase:", error);
+      alert("Error guardando carta");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Seguro que deseas borrar esta carta?')) {
+      try {
+        await cartasApi.deleteCarta(id);
+        setItems(items.filter(item => item.id !== id));
+      } catch (error) {
+        console.error("Error Supabase:", error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
@@ -158,24 +197,34 @@ const CartasAdmin = () => {
         <input 
           type="text" 
           placeholder="Título" 
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors font-medium text-sm"
         />
         <textarea 
           placeholder="Escribe el contenido aquí..." 
           rows={6}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
           className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors resize-none font-sans font-light text-sm leading-relaxed custom-scrollbar"
         />
         <div className="flex gap-3">
           <input 
             type="date" 
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
             className="flex-1 px-4 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]"
           />
-          <select className="flex-1 px-4 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]">
+          <select 
+            value={status} 
+            onChange={(e) => setStatus(e.target.value)}
+            className="flex-1 px-4 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]"
+          >
             <option value="draft">Borrador</option>
             <option value="published">Publicado</option>
           </select>
         </div>
-        <button className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
+        <button onClick={handleSave} className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
           <Save size={18} strokeWidth={1.5} /> Guardar Carta
         </button>
       </div>
@@ -188,10 +237,10 @@ const CartasAdmin = () => {
           ) : items.map((item) => (
             <div key={item.id} className="flex items-center justify-between p-5 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm rounded-3xl">
               <div>
-                <p className="font-sans font-medium text-[15px]">{item.titulo}</p>
-                <p className="text-[11px] opacity-40 mt-1 uppercase tracking-wider">{new Date(item.fecha).toLocaleDateString()}</p>
+                <p className="font-sans font-medium text-[15px]">{item.title || item.titulo}</p>
+                <p className="text-[11px] opacity-40 mt-1 uppercase tracking-wider">{new Date(item.fecha).toLocaleDateString()} - {item.status}</p>
               </div>
-              <button className="text-text-main/30 hover:text-accent p-3 transition-colors">
+              <button onClick={() => handleDelete(item.id)} className="text-text-main/30 hover:text-accent p-3 transition-colors">
                 <Trash2 size={16} strokeWidth={1.5} />
               </button>
             </div>
@@ -254,7 +303,38 @@ const MultimediaAdmin = () => {
 
 const NotitasAdmin = () => {
   const [items, setItems] = useState([]);
+  const [text, setText] = useState('');
+
   useEffect(() => { notitasApi.getNotitas().then(setItems).catch(console.error); }, []);
+
+  const handleSave = async () => {
+    if (!text) return alert("La notita no puede estar vacía");
+    try {
+      await notitasApi.saveNotita({
+        text,
+        fecha: new Date().toISOString()
+      });
+      alert("Notita guardada correctamente");
+      setText('');
+      const updated = await notitasApi.getNotitas();
+      setItems(updated);
+    } catch (error) {
+      console.error("Error Supabase:", error);
+      alert("Error guardando notita");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Seguro que deseas borrar esta notita?')) {
+      try {
+        await notitasApi.deleteNotita(id);
+        setItems(items.filter(item => item.id !== id));
+      } catch (error) {
+        console.error("Error Supabase:", error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
@@ -265,9 +345,11 @@ const NotitasAdmin = () => {
           placeholder="Escribe algo rápido... (máx 150 carácteres)" 
           rows={3}
           maxLength={150}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
           className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors resize-none font-sans font-light text-sm leading-relaxed custom-scrollbar"
         />
-        <button className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
+        <button onClick={handleSave} className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
           <Save size={18} strokeWidth={1.5} /> Guardar Notita
         </button>
       </div>
@@ -280,9 +362,9 @@ const NotitasAdmin = () => {
           ) : items.map((item) => (
             <div key={item.id} className="flex items-center justify-between p-5 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm rounded-3xl">
               <p className="font-sans font-light text-[14px] text-text-main/80 w-4/5 truncate">
-                "{item.texto}"
+                "{item.text || item.texto}"
               </p>
-              <button className="text-text-main/30 hover:text-accent p-3 transition-colors shrink-0">
+              <button onClick={() => handleDelete(item.id)} className="text-text-main/30 hover:text-accent p-3 transition-colors shrink-0">
                 <Trash2 size={16} strokeWidth={1.5} />
               </button>
             </div>
