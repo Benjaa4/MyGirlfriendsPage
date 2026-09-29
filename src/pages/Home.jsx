@@ -138,7 +138,7 @@ const FlowerGarden = ({ messages }) => {
             }}
           >
             <p className="font-sans font-light text-[13px] text-text-main/90 whitespace-nowrap overflow-hidden text-ellipsis">
-              {nodes.find(n => n.id === activeMessage).texto}
+              {nodes.find(n => n.id === activeMessage)?.text || ''}
             </p>
           </motion.div>
         )}
@@ -162,19 +162,14 @@ export const HomeView = () => {
   const constraintsRef = useRef(null);
 
   useEffect(() => {
-    import('../lib/supabase').then(({ notitasApi, mensajesJardinApi, settingsApi }) => {
+    import('../lib/supabase').then(({ notitasApi, settingsApi }) => {
       notitasApi.getNotitas().then(data => {
         setNotitas(data || []);
+        // Also populate flower messages from notes as fallback
+        setFlowerMessages(data || []);
       }).catch(err => {
         console.error('Error fetching notitas:', err);
         setNotitas([]);
-      });
-
-      mensajesJardinApi.getMensajes().then(data => {
-        setFlowerMessages(data || []);
-      }).catch(err => {
-        console.error('Error fetching flower messages:', err);
-        setFlowerMessages([]);
       });
 
       settingsApi.getSettings().then(data => {
@@ -386,7 +381,7 @@ export const HomeView = () => {
               className="pointer-events-auto cursor-grab active:cursor-grabbing w-auto max-w-[80%] rounded-full px-6 py-3 bg-[#FDFBF7]/40 backdrop-blur-xl border border-[#6B1D2F]/15 shadow-sm"
             >
               <p className="font-sans font-light text-[13px] text-text-main/90 text-center truncate">
-                "{notita.text || notita.texto}"
+                "{notita.text}"
               </p>
             </motion.div>
           ))}
@@ -437,7 +432,7 @@ export const HomeView = () => {
                       >
                         <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 w-full flex items-center justify-center">
                           <p className="font-sans font-light text-[15px] text-text-main/90 text-center leading-relaxed italic w-full">
-                            "{notita.text || notita.texto}"
+                            "{notita.text}"
                           </p>
                         </div>
                       </div>

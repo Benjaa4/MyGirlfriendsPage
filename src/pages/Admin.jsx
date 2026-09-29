@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Lock, FileText, Image as ImageIcon, Save, Trash2, Upload, Plus, MessageCircle, Flower, Settings } from 'lucide-react';
-import { supabase, cartasApi, multimediaApi, notitasApi, mensajesJardinApi, settingsApi } from '../lib/supabase';
+import { supabase, cartasApi, fotosApi, notitasApi, settingsApi } from '../lib/supabase';
 
 export const AdminPanel = () => {
   const [session, setSession] = useState(null);
@@ -100,8 +100,8 @@ export const AdminPanel = () => {
           <FileText size={16} strokeWidth={1.5} /> Cartas
         </button>
         <button
-          onClick={() => setActiveTab('multimedia')}
-          className={`py-4 px-6 text-[13px] min-w-max font-medium flex items-center justify-center gap-2 ${activeTab === 'multimedia' ? 'text-accent border-b-2 border-accent' : 'opacity-40 hover:opacity-70'}`}
+          onClick={() => setActiveTab('fotos')}
+          className={`py-4 px-6 text-[13px] min-w-max font-medium flex items-center justify-center gap-2 ${activeTab === 'fotos' ? 'text-accent border-b-2 border-accent' : 'opacity-40 hover:opacity-70'}`}
         >
           <ImageIcon size={16} strokeWidth={1.5} /> Galería
         </button>
@@ -110,12 +110,6 @@ export const AdminPanel = () => {
           className={`py-4 px-6 text-[13px] min-w-max font-medium flex items-center justify-center gap-2 ${activeTab === 'notitas' ? 'text-accent border-b-2 border-accent' : 'opacity-40 hover:opacity-70'}`}
         >
           <MessageCircle size={16} strokeWidth={1.5} /> Notitas
-        </button>
-        <button
-          onClick={() => setActiveTab('jardin')}
-          className={`py-4 px-6 text-[13px] min-w-max font-medium flex items-center justify-center gap-2 ${activeTab === 'jardin' ? 'text-accent border-b-2 border-accent' : 'opacity-40 hover:opacity-70'}`}
-        >
-          <Flower size={16} strokeWidth={1.5} /> Flores
         </button>
         <button
           onClick={() => setActiveTab('ajustes')}
@@ -127,9 +121,8 @@ export const AdminPanel = () => {
 
       <main className="p-8">
         {activeTab === 'cartas' && <CartasAdmin />}
-        {activeTab === 'multimedia' && <MultimediaAdmin />}
+        {activeTab === 'fotos' && <FotosAdmin />}
         {activeTab === 'notitas' && <NotitasAdmin />}
-        {activeTab === 'jardin' && <JardinAdmin />}
         {activeTab === 'ajustes' && <SettingsAdmin />}
       </main>
       
@@ -237,7 +230,7 @@ const CartasAdmin = () => {
           ) : items.map((item) => (
             <div key={item.id} className="flex items-center justify-between p-5 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm rounded-3xl">
               <div>
-                <p className="font-sans font-medium text-[15px]">{item.title || item.titulo}</p>
+                <p className="font-sans font-medium text-[15px]">{item.title}</p>
                 <p className="text-[11px] opacity-40 mt-1 uppercase tracking-wider">{new Date(item.fecha).toLocaleDateString()} - {item.status}</p>
               </div>
               <button onClick={() => handleDelete(item.id)} className="text-text-main/30 hover:text-accent p-3 transition-colors">
@@ -251,9 +244,61 @@ const CartasAdmin = () => {
   );
 };
 
-const MultimediaAdmin = () => {
+const FotosAdmin = () => {
   const [items, setItems] = useState([]);
-  useEffect(() => { multimediaApi.getMultimedia().then(setItems).catch(console.error); }, []);
+  const [file, setFile] = useState(null);
+  const [description, setDescription] = useState('');
+  const [fecha, setFecha] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => { fotosApi.getFotos().then(setItems).catch(console.error); }, []);
+
+  const handleFileClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!file || !fecha) return alert("Selecciona un archivo y una fecha");
+    setUploading(true);
+    try {
+      const url = await fotosApi.uploadFile(file, 'galeria');
+      await fotosApi.saveFoto({
+        url,
+        description,
+        fecha: new Date(fecha).toISOString()
+      });
+      alert("Archivo guardado correctamente");
+      setFile(null);
+      setDescription('');
+      setFecha('');
+      const updated = await fotosApi.getFotos();
+      setItems(updated);
+    } catch (error) {
+      console.error("Error Supabase:", error);
+      alert("Error guardando archivo");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (id, url) => {
+    if (window.confirm('¿Seguro que deseas borrar este archivo?')) {
+      try {
+        await fotosApi.deleteFoto(id, url);
+        setItems(items.filter(item => item.id !== id));
+      } catch (error) {
+        console.error("Error Supabase:", error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
@@ -261,24 +306,41 @@ const MultimediaAdmin = () => {
           <Upload size={18} className="text-accent" strokeWidth={1.5} /> Subir Archivo
         </h2>
         
-        <div className="border border-dashed border-[#6B1D2F]/20 rounded-3xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-accent/40 transition-colors bg-[#FDFBF7]/40 backdrop-blur-md shadow-sm">
+        <div 
+          onClick={handleFileClick}
+          className="border border-dashed border-[#6B1D2F]/20 rounded-3xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-accent/40 transition-colors bg-[#FDFBF7]/40 backdrop-blur-md shadow-sm"
+        >
           <Upload size={28} className="text-accent mb-3 opacity-80" strokeWidth={1.5} />
-          <p className="text-[13px] font-medium">Toca para seleccionar un archivo</p>
+          <p className="text-[13px] font-medium">{file ? file.name : "Toca para seleccionar un archivo"}</p>
           <p className="text-[11px] opacity-40 mt-1">Imágenes o videos (max 10MB)</p>
-          <input type="file" className="hidden" accept="image/*,video/*" />
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden" 
+            accept="image/*,video/*" 
+          />
         </div>
 
         <input 
           type="text" 
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Pie de foto / Descripción" 
           className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]"
         />
         <input 
           type="date" 
+          value={fecha}
+          onChange={(e) => setFecha(e.target.value)}
           className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]"
         />
-        <button className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
-          <Save size={18} strokeWidth={1.5} /> Guardar en Galería
+        <button 
+          onClick={handleSave} 
+          disabled={uploading}
+          className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm disabled:opacity-50"
+        >
+          <Save size={18} strokeWidth={1.5} /> {uploading ? "Guardando..." : "Guardar en Galería"}
         </button>
       </div>
 
@@ -286,11 +348,11 @@ const MultimediaAdmin = () => {
         <h3 className="text-[11px] font-medium opacity-40 mb-4 uppercase tracking-[0.15em] ml-2">Archivos Recientes</h3>
         <div className="grid grid-cols-2 gap-4">
           {items.length === 0 ? (
-            <p className="text-[13px] text-text-main/50 italic px-2 col-span-2">Aún no hay archivos multimedia.</p>
+            <p className="text-[13px] text-text-main/50 italic px-2 col-span-2">Aún no hay archivos en fotos.</p>
           ) : items.map((item) => (
             <div key={item.id} className="relative aspect-[4/5] bg-[#FDFBF7]/40 backdrop-blur-md rounded-3xl overflow-hidden flex items-center justify-center border border-[#6B1D2F]/10 shadow-sm">
               <img src={item.url} alt="" className="w-full h-full object-cover" />
-              <button className="absolute top-3 right-3 bg-[#FDFBF7]/80 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-2 rounded-full text-text-main/50 hover:text-accent backdrop-blur-md transition-colors">
+              <button onClick={() => handleDelete(item.id, item.url)} className="absolute top-3 right-3 bg-[#FDFBF7]/80 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-2 rounded-full text-text-main/50 hover:text-accent backdrop-blur-md transition-colors">
                 <Trash2 size={16} strokeWidth={1.5} />
               </button>
             </div>
@@ -362,7 +424,7 @@ const NotitasAdmin = () => {
           ) : items.map((item) => (
             <div key={item.id} className="flex items-center justify-between p-5 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm rounded-3xl">
               <p className="font-sans font-light text-[14px] text-text-main/80 w-4/5 truncate">
-                "{item.text || item.texto}"
+                "{item.text}"
               </p>
               <button onClick={() => handleDelete(item.id)} className="text-text-main/30 hover:text-accent p-3 transition-colors shrink-0">
                 <Trash2 size={16} strokeWidth={1.5} />
@@ -375,46 +437,7 @@ const NotitasAdmin = () => {
   );
 };
 
-const JardinAdmin = () => {
-  const [items, setItems] = useState([]);
-  useEffect(() => { mensajesJardinApi.getMensajes().then(setItems).catch(console.error); }, []);
-  return (
-    <div className="space-y-8">
-      <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
-        <h2 className="text-lg font-sans font-light flex items-center gap-2 mb-2">
-          <Flower size={18} className="text-accent" strokeWidth={1.5} /> Nuevo Mensaje de Flor
-        </h2>
-        <input 
-          type="text" 
-          placeholder="Escribe una frase corta (ej. Eres mi paz)" 
-          maxLength={40}
-          className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors font-sans font-light text-sm"
-        />
-        <button className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
-          <Save size={18} strokeWidth={1.5} /> Guardar Mensaje
-        </button>
-      </div>
 
-      <div className="pt-2">
-        <h3 className="text-[11px] font-medium opacity-40 mb-4 uppercase tracking-[0.15em] ml-2">Mensajes del Jardín Existentes</h3>
-        <div className="space-y-3">
-          {items.length === 0 ? (
-            <p className="text-[13px] text-text-main/50 italic px-2">No hay frases en las flores.</p>
-          ) : items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between p-5 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm rounded-3xl">
-              <p className="font-sans font-light text-[14px] text-text-main/80 truncate">
-                "{item.texto}"
-              </p>
-              <button className="text-text-main/30 hover:text-accent p-3 transition-colors shrink-0">
-                <Trash2 size={16} strokeWidth={1.5} />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const SettingsAdmin = () => {
   const [fecha, setFecha] = useState('');

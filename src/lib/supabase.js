@@ -38,11 +38,11 @@ export const cartasApi = {
   }
 };
 
-// Helpers para Multimedia
-export const multimediaApi = {
-  async getMultimedia() {
+// Helpers para Fotos
+export const fotosApi = {
+  async getFotos() {
     if (!supabase) throw new Error("Supabase no configurado");
-    const { data, error } = await supabase.from('multimedia').select('*').order('fecha', { ascending: false });
+    const { data, error } = await supabase.from('fotos').select('*').order('fecha', { ascending: false });
     if (error) throw error;
     return data;
   },
@@ -53,33 +53,33 @@ export const multimediaApi = {
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage.from('multimedia').upload(filePath, file);
+    const { error: uploadError } = await supabase.storage.from('fotos').upload(filePath, file);
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage.from('multimedia').getPublicUrl(filePath);
+    const { data } = supabase.storage.from('fotos').getPublicUrl(filePath);
     return data.publicUrl;
   },
 
-  async saveMultimedia(multimediaItem) {
+  async saveFoto(fotoItem) {
     if (!supabase) throw new Error("Supabase no configurado");
-    const { data, error } = await supabase.from('multimedia').upsert(multimediaItem).select();
+    const { data, error } = await supabase.from('fotos').upsert(fotoItem).select();
     if (error) throw error;
     return data;
   },
 
-  async deleteMultimedia(id, fileUrl) {
+  async deleteFoto(id, fileUrl) {
     if (!supabase) throw new Error("Supabase no configurado");
     try {
       if (fileUrl) {
         const pathParts = fileUrl.split('/');
         const filePath = `${pathParts[pathParts.length - 2]}/${pathParts[pathParts.length - 1]}`;
-        await supabase.storage.from('multimedia').remove([filePath]);
+        await supabase.storage.from('fotos').remove([filePath]);
       }
     } catch (e) {
       console.error('Error al borrar el archivo del storage', e);
     }
     
-    const { error } = await supabase.from('multimedia').delete().eq('id', id);
+    const { error } = await supabase.from('fotos').delete().eq('id', id);
     if (error) throw error;
   }
 };
