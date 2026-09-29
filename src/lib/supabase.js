@@ -131,9 +131,36 @@ export const settingsApi = {
 
   async updateSettings(settings) {
     if (!supabase) throw new Error("Supabase no configurado");
-    // Asume que siempre hay 1 sola fila con id = 1
     const { data, error } = await supabase.from('settings').upsert({ id: 1, ...settings }).select();
     if (error) throw error;
     return data;
+  }
+};
+
+// Helpers para Flores
+export const floresApi = {
+  async getFlores() {
+    if (!supabase) throw new Error("Supabase no configurado");
+    const { data, error } = await supabase.from('flores').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+
+  async saveFlor(flor) {
+    if (!supabase) throw new Error("Supabase no configurado");
+    try {
+      const { data, error } = await supabase.from('flores').upsert(flor).select();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error Supabase al guardar flor:", error);
+      throw error;
+    }
+  },
+
+  async deleteFlor(id) {
+    if (!supabase) throw new Error("Supabase no configurado");
+    const { error } = await supabase.from('flores').delete().eq('id', id);
+    if (error) throw error;
   }
 };

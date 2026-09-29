@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Lock, FileText, Image as ImageIcon, Save, Trash2, Upload, Plus, MessageCircle, Flower, Settings } from 'lucide-react';
-import { supabase, cartasApi, fotosApi, notitasApi, settingsApi } from '../lib/supabase';
+import { Lock, FileText, Image as ImageIcon, Save, Trash2, Upload, Plus, MessageCircle, Flower, Settings, Pencil } from 'lucide-react';
+import { supabase, cartasApi, fotosApi, notitasApi, floresApi, settingsApi } from '../lib/supabase';
 
 export const AdminPanel = () => {
   const [session, setSession] = useState(null);
@@ -112,6 +112,12 @@ export const AdminPanel = () => {
           <MessageCircle size={16} strokeWidth={1.5} /> Notitas
         </button>
         <button
+          onClick={() => setActiveTab('flores')}
+          className={`py-4 px-6 text-[13px] min-w-max font-medium flex items-center justify-center gap-2 ${activeTab === 'flores' ? 'text-accent border-b-2 border-accent' : 'opacity-40 hover:opacity-70'}`}
+        >
+          <Flower size={16} strokeWidth={1.5} /> Flores
+        </button>
+        <button
           onClick={() => setActiveTab('ajustes')}
           className={`py-4 px-6 text-[13px] min-w-max font-medium flex items-center justify-center gap-2 ${activeTab === 'ajustes' ? 'text-accent border-b-2 border-accent' : 'opacity-40 hover:opacity-70'}`}
         >
@@ -123,6 +129,7 @@ export const AdminPanel = () => {
         {activeTab === 'cartas' && <CartasAdmin />}
         {activeTab === 'fotos' && <FotosAdmin />}
         {activeTab === 'notitas' && <NotitasAdmin />}
+        {activeTab === 'flores' && <FloresAdmin />}
         {activeTab === 'ajustes' && <SettingsAdmin />}
       </main>
       
@@ -141,6 +148,7 @@ export const AdminPanel = () => {
 
 const CartasAdmin = () => {
   const [items, setItems] = useState([]);
+  const [editId, setEditId] = useState(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [fecha, setFecha] = useState('');
@@ -148,16 +156,29 @@ const CartasAdmin = () => {
 
   useEffect(() => { cartasApi.getCartas().then(setItems).catch(console.error); }, []);
 
+  const handleEdit = (item) => {
+    setEditId(item.id);
+    setTitle(item.title);
+    setContent(item.content);
+    setFecha(item.fecha ? item.fecha.split('T')[0] : '');
+    setStatus(item.status);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSave = async () => {
     if (!title || !content || !fecha) return alert("Completa todos los campos");
     try {
-      await cartasApi.saveCarta({
+      const payload = {
         title,
         content,
         fecha: new Date(fecha).toISOString(),
         status
-      });
-      alert("Carta guardada correctamente");
+      };
+      if (editId) payload.id = editId;
+
+      await cartasApi.saveCarta(payload);
+      alert(editId ? "Carta actualizada correctamente" : "Carta guardada correctamente");
+      setEditId(null);
       setTitle('');
       setContent('');
       setFecha('');
@@ -185,7 +206,8 @@ const CartasAdmin = () => {
     <div className="space-y-8">
       <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
         <h2 className="text-lg font-sans font-light flex items-center gap-2 mb-2">
-          <Plus size={18} className="text-accent" strokeWidth={1.5} /> Nueva Carta
+          {editId ? <Pencil size={18} className="text-accent" strokeWidth={1.5} /> : <Plus size={18} className="text-accent" strokeWidth={1.5} />} 
+          {editId ? "Editar Carta" : "Nueva Carta"}
         </h2>
         <input 
           type="text" 
@@ -217,9 +239,16 @@ const CartasAdmin = () => {
             <option value="published">Publicado</option>
           </select>
         </div>
-        <button onClick={handleSave} className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
-          <Save size={18} strokeWidth={1.5} /> Guardar Carta
-        </button>
+        <div className="flex gap-2 mt-2">
+          {editId && (
+            <button onClick={() => { setEditId(null); setTitle(''); setContent(''); setFecha(''); setStatus('draft'); }} className="py-4 px-6 bg-transparent text-text-main/60 text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-[#6B1D2F]/5 transition-colors shadow-sm">
+              Cancelar
+            </button>
+          )}
+          <button onClick={handleSave} className="flex-1 py-4 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
+            <Save size={18} strokeWidth={1.5} /> {editId ? "Actualizar Carta" : "Guardar Carta"}
+          </button>
+        </div>
       </div>
 
       <div className="pt-2">
@@ -233,9 +262,14 @@ const CartasAdmin = () => {
                 <p className="font-sans font-medium text-[15px]">{item.title}</p>
                 <p className="text-[11px] opacity-40 mt-1 uppercase tracking-wider">{new Date(item.fecha).toLocaleDateString()} - {item.status}</p>
               </div>
-              <button onClick={() => handleDelete(item.id)} className="text-text-main/30 hover:text-accent p-3 transition-colors">
-                <Trash2 size={16} strokeWidth={1.5} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleEdit(item)} className="text-text-main/40 hover:text-accent p-3 transition-colors">
+                  <Pencil size={16} strokeWidth={1.5} />
+                </button>
+                <button onClick={() => handleDelete(item.id)} className="text-text-main/40 hover:text-accent p-3 transition-colors">
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -246,7 +280,9 @@ const CartasAdmin = () => {
 
 const FotosAdmin = () => {
   const [items, setItems] = useState([]);
+  const [editId, setEditId] = useState(null);
   const [file, setFile] = useState(null);
+  const [existingUrl, setExistingUrl] = useState('');
   const [description, setDescription] = useState('');
   const [fecha, setFecha] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -264,18 +300,35 @@ const FotosAdmin = () => {
     }
   };
 
+  const handleEdit = (item) => {
+    setEditId(item.id);
+    setExistingUrl(item.url);
+    setDescription(item.description || '');
+    setFecha(item.fecha ? item.fecha.split('T')[0] : '');
+    setFile(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSave = async () => {
-    if (!file || !fecha) return alert("Selecciona un archivo y una fecha");
+    if ((!file && !editId) || !fecha) return alert("Selecciona un archivo y una fecha");
     setUploading(true);
     try {
-      const url = await fotosApi.uploadFile(file, 'galeria');
-      await fotosApi.saveFoto({
+      let url = existingUrl;
+      if (file) {
+        url = await fotosApi.uploadFile(file, 'galeria');
+      }
+      const payload = {
         url,
         description,
         fecha: new Date(fecha).toISOString()
-      });
-      alert("Archivo guardado correctamente");
+      };
+      if (editId) payload.id = editId;
+
+      await fotosApi.saveFoto(payload);
+      alert(editId ? "Archivo actualizado correctamente" : "Archivo guardado correctamente");
+      setEditId(null);
       setFile(null);
+      setExistingUrl('');
       setDescription('');
       setFecha('');
       const updated = await fotosApi.getFotos();
@@ -303,7 +356,8 @@ const FotosAdmin = () => {
     <div className="space-y-8">
       <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
         <h2 className="text-lg font-sans font-light flex items-center gap-2 mb-2">
-          <Upload size={18} className="text-accent" strokeWidth={1.5} /> Subir Archivo
+          {editId ? <Pencil size={18} className="text-accent" strokeWidth={1.5} /> : <Upload size={18} className="text-accent" strokeWidth={1.5} />} 
+          {editId ? "Editar Archivo" : "Subir Archivo"}
         </h2>
         
         <div 
@@ -311,7 +365,7 @@ const FotosAdmin = () => {
           className="border border-dashed border-[#6B1D2F]/20 rounded-3xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-accent/40 transition-colors bg-[#FDFBF7]/40 backdrop-blur-md shadow-sm"
         >
           <Upload size={28} className="text-accent mb-3 opacity-80" strokeWidth={1.5} />
-          <p className="text-[13px] font-medium">{file ? file.name : "Toca para seleccionar un archivo"}</p>
+          <p className="text-[13px] font-medium">{file ? file.name : existingUrl ? "Toca para reemplazar el archivo actual" : "Toca para seleccionar un archivo"}</p>
           <p className="text-[11px] opacity-40 mt-1">Imágenes o videos (max 10MB)</p>
           <input 
             type="file" 
@@ -335,13 +389,20 @@ const FotosAdmin = () => {
           onChange={(e) => setFecha(e.target.value)}
           className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]"
         />
-        <button 
-          onClick={handleSave} 
-          disabled={uploading}
-          className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm disabled:opacity-50"
-        >
-          <Save size={18} strokeWidth={1.5} /> {uploading ? "Guardando..." : "Guardar en Galería"}
-        </button>
+        <div className="flex gap-2 mt-2">
+          {editId && (
+            <button onClick={() => { setEditId(null); setFile(null); setExistingUrl(''); setDescription(''); setFecha(''); }} className="py-4 px-6 bg-transparent text-text-main/60 text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-[#6B1D2F]/5 transition-colors shadow-sm" disabled={uploading}>
+              Cancelar
+            </button>
+          )}
+          <button 
+            onClick={handleSave} 
+            disabled={uploading}
+            className="flex-1 py-4 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm disabled:opacity-50"
+          >
+            <Save size={18} strokeWidth={1.5} /> {uploading ? "Guardando..." : (editId ? "Actualizar Galería" : "Guardar en Galería")}
+          </button>
+        </div>
       </div>
 
       <div className="pt-2">
@@ -350,11 +411,16 @@ const FotosAdmin = () => {
           {items.length === 0 ? (
             <p className="text-[13px] text-text-main/50 italic px-2 col-span-2">Aún no hay archivos en fotos.</p>
           ) : items.map((item) => (
-            <div key={item.id} className="relative aspect-[4/5] bg-[#FDFBF7]/40 backdrop-blur-md rounded-3xl overflow-hidden flex items-center justify-center border border-[#6B1D2F]/10 shadow-sm">
+            <div key={item.id} className="relative aspect-[4/5] bg-[#FDFBF7]/40 backdrop-blur-md rounded-3xl overflow-hidden flex items-center justify-center border border-[#6B1D2F]/10 shadow-sm group">
               <img src={item.url} alt="" className="w-full h-full object-cover" />
-              <button onClick={() => handleDelete(item.id, item.url)} className="absolute top-3 right-3 bg-[#FDFBF7]/80 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-2 rounded-full text-text-main/50 hover:text-accent backdrop-blur-md transition-colors">
-                <Trash2 size={16} strokeWidth={1.5} />
-              </button>
+              <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => handleEdit(item)} className="bg-[#FDFBF7]/80 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-2 rounded-full text-text-main/60 hover:text-accent transition-colors">
+                  <Pencil size={16} strokeWidth={1.5} />
+                </button>
+                <button onClick={() => handleDelete(item.id, item.url)} className="bg-[#FDFBF7]/80 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-2 rounded-full text-text-main/60 hover:text-accent transition-colors">
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -365,18 +431,28 @@ const FotosAdmin = () => {
 
 const NotitasAdmin = () => {
   const [items, setItems] = useState([]);
+  const [editId, setEditId] = useState(null);
   const [text, setText] = useState('');
 
   useEffect(() => { notitasApi.getNotitas().then(setItems).catch(console.error); }, []);
 
+  const handleEdit = (item) => {
+    setEditId(item.id);
+    setText(item.text);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSave = async () => {
     if (!text) return alert("La notita no puede estar vacía");
     try {
-      await notitasApi.saveNotita({
+      const payload = {
         text,
         fecha: new Date().toISOString()
-      });
-      alert("Notita guardada correctamente");
+      };
+      if (editId) payload.id = editId;
+      await notitasApi.saveNotita(payload);
+      alert(editId ? "Notita actualizada correctamente" : "Notita guardada correctamente");
+      setEditId(null);
       setText('');
       const updated = await notitasApi.getNotitas();
       setItems(updated);
@@ -401,7 +477,8 @@ const NotitasAdmin = () => {
     <div className="space-y-8">
       <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
         <h2 className="text-lg font-sans font-light flex items-center gap-2 mb-2">
-          <MessageCircle size={18} className="text-accent" strokeWidth={1.5} /> Nueva Notita
+          {editId ? <Pencil size={18} className="text-accent" strokeWidth={1.5} /> : <MessageCircle size={18} className="text-accent" strokeWidth={1.5} />} 
+          {editId ? "Editar Notita" : "Nueva Notita"}
         </h2>
         <textarea 
           placeholder="Escribe algo rápido... (máx 150 carácteres)" 
@@ -411,9 +488,16 @@ const NotitasAdmin = () => {
           onChange={(e) => setText(e.target.value)}
           className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors resize-none font-sans font-light text-sm leading-relaxed custom-scrollbar"
         />
-        <button onClick={handleSave} className="w-full py-4 mt-2 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
-          <Save size={18} strokeWidth={1.5} /> Guardar Notita
-        </button>
+        <div className="flex gap-2 mt-2">
+          {editId && (
+            <button onClick={() => { setEditId(null); setText(''); }} className="py-4 px-6 bg-transparent text-text-main/60 text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-[#6B1D2F]/5 transition-colors shadow-sm">
+              Cancelar
+            </button>
+          )}
+          <button onClick={handleSave} className="flex-1 py-4 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
+            <Save size={18} strokeWidth={1.5} /> {editId ? "Actualizar Notita" : "Guardar Notita"}
+          </button>
+        </div>
       </div>
 
       <div className="pt-2">
@@ -426,9 +510,144 @@ const NotitasAdmin = () => {
               <p className="font-sans font-light text-[14px] text-text-main/80 w-4/5 truncate">
                 "{item.text}"
               </p>
-              <button onClick={() => handleDelete(item.id)} className="text-text-main/30 hover:text-accent p-3 transition-colors shrink-0">
-                <Trash2 size={16} strokeWidth={1.5} />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => handleEdit(item)} className="text-text-main/40 hover:text-accent p-3 transition-colors">
+                  <Pencil size={16} strokeWidth={1.5} />
+                </button>
+                <button onClick={() => handleDelete(item.id)} className="text-text-main/40 hover:text-accent p-3 transition-colors">
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FloresAdmin = () => {
+  const [items, setItems] = useState([]);
+  const [editId, setEditId] = useState(null);
+  const [mensaje, setMensaje] = useState('');
+  const [color, setColor] = useState('#8B263E'); // Default Bordó
+  const [fecha, setFecha] = useState('');
+
+  useEffect(() => { floresApi.getFlores().then(setItems).catch(console.error); }, []);
+
+  const handleEdit = (item) => {
+    setEditId(item.id);
+    setMensaje(item.mensaje);
+    setColor(item.color || '#8B263E');
+    setFecha(item.fecha ? item.fecha.split('T')[0] : '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSave = async () => {
+    if (!mensaje || !fecha) return alert("Completa el mensaje y la fecha");
+    try {
+      const payload = {
+        mensaje,
+        color,
+        fecha: new Date(fecha).toISOString()
+      };
+      if (editId) {
+        payload.id = editId;
+      }
+      await floresApi.saveFlor(payload);
+      alert(editId ? "Flor actualizada correctamente" : "Flor guardada correctamente");
+      setEditId(null);
+      setMensaje('');
+      setColor('#8B263E');
+      setFecha('');
+      const updated = await floresApi.getFlores();
+      setItems(updated);
+    } catch (error) {
+      console.error("Error Supabase:", error);
+      alert("Error guardando flor");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Seguro que deseas borrar esta flor?')) {
+      try {
+        await floresApi.deleteFlor(id);
+        setItems(items.filter(item => item.id !== id));
+      } catch (error) {
+        console.error("Error Supabase:", error);
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="space-y-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm p-6 rounded-3xl">
+        <h2 className="text-lg font-sans font-light flex items-center gap-2 mb-2">
+          {editId ? <Pencil size={18} className="text-accent" strokeWidth={1.5} /> : <Flower size={18} className="text-accent" strokeWidth={1.5} />} 
+          {editId ? "Editar Flor" : "Nueva Flor"}
+        </h2>
+        <textarea 
+          placeholder="Mensaje de la flor (ej. Eres mi paz)..." 
+          rows={3}
+          maxLength={150}
+          value={mensaje}
+          onChange={(e) => setMensaje(e.target.value)}
+          className="w-full px-5 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors resize-none font-sans font-light text-sm leading-relaxed custom-scrollbar"
+        />
+        <div className="flex gap-3">
+          <select 
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            className="flex-1 px-4 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]"
+          >
+            <option value="#8B263E">Bordó Clásico</option>
+            <option value="#9B364E">Granate Claro</option>
+            <option value="#5B1626">Vino Oscuro</option>
+            <option value="#D4BBA5">Beige / Crema</option>
+          </select>
+          <input 
+            type="date" 
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className="flex-1 px-4 py-4 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 rounded-3xl outline-none focus:border-accent transition-colors text-[13px]"
+          />
+        </div>
+        <div className="flex gap-2 mt-2">
+          {editId && (
+            <button onClick={() => { setEditId(null); setMensaje(''); setColor('#8B263E'); setFecha(''); }} className="py-4 px-6 bg-transparent text-text-main/60 text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-[#6B1D2F]/5 transition-colors shadow-sm">
+              Cancelar
+            </button>
+          )}
+          <button onClick={handleSave} className="flex-1 py-4 bg-accent text-white text-[15px] rounded-3xl font-medium tracking-wide flex items-center justify-center gap-2 hover:bg-accent-light transition-colors shadow-sm">
+            <Save size={18} strokeWidth={1.5} /> {editId ? "Actualizar Flor" : "Guardar Flor"}
+          </button>
+        </div>
+      </div>
+
+      <div className="pt-2">
+        <h3 className="text-[11px] font-medium opacity-40 mb-4 uppercase tracking-[0.15em] ml-2">Flores Plantadas</h3>
+        <div className="space-y-3">
+          {items.length === 0 ? (
+            <p className="text-[13px] text-text-main/50 italic px-2">No hay flores en el jardín.</p>
+          ) : items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between p-5 bg-[#FDFBF7]/40 backdrop-blur-md border border-[#6B1D2F]/10 shadow-sm rounded-3xl">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full shadow-sm border border-[#6B1D2F]/20" style={{ backgroundColor: item.color || '#8B263E' }}></div>
+                <div className="flex flex-col">
+                  <p className="font-sans font-light text-[14px] text-text-main/80 truncate">
+                    "{item.mensaje}"
+                  </p>
+                  {item.fecha && <p className="text-[11px] opacity-40 mt-1 uppercase tracking-wider">{new Date(item.fecha).toLocaleDateString()}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => handleEdit(item)} className="text-text-main/40 hover:text-accent p-3 transition-colors">
+                  <Pencil size={16} strokeWidth={1.5} />
+                </button>
+                <button onClick={() => handleDelete(item.id)} className="text-text-main/40 hover:text-accent p-3 transition-colors">
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

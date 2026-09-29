@@ -138,7 +138,7 @@ const FlowerGarden = ({ messages }) => {
             }}
           >
             <p className="font-sans font-light text-[13px] text-text-main/90 whitespace-nowrap overflow-hidden text-ellipsis">
-              {nodes.find(n => n.id === activeMessage)?.text || ''}
+              {nodes.find(n => n.id === activeMessage)?.mensaje || ''}
             </p>
           </motion.div>
         )}
@@ -162,14 +162,19 @@ export const HomeView = () => {
   const constraintsRef = useRef(null);
 
   useEffect(() => {
-    import('../lib/supabase').then(({ notitasApi, settingsApi }) => {
+    import('../lib/supabase').then(({ notitasApi, floresApi, settingsApi }) => {
       notitasApi.getNotitas().then(data => {
         setNotitas(data || []);
-        // Also populate flower messages from notes as fallback
-        setFlowerMessages(data || []);
       }).catch(err => {
         console.error('Error fetching notitas:', err);
         setNotitas([]);
+      });
+
+      floresApi.getFlores().then(data => {
+        setFlowerMessages(data || []);
+      }).catch(err => {
+        console.error('Error fetching flores:', err);
+        setFlowerMessages([]);
       });
 
       settingsApi.getSettings().then(data => {
