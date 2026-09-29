@@ -118,28 +118,7 @@ export const notitasApi = {
   }
 };
 
-// Helpers para Mensajes del Jardín (Flores)
-export const mensajesJardinApi = {
-  async getMensajes() {
-    if (!supabase) throw new Error("Supabase no configurado");
-    const { data, error } = await supabase.from('mensajes_jardin').select('*').order('id', { ascending: true });
-    if (error) throw error;
-    return data;
-  },
 
-  async saveMensaje(mensaje) {
-    if (!supabase) throw new Error("Supabase no configurado");
-    const { data, error } = await supabase.from('mensajes_jardin').upsert(mensaje).select();
-    if (error) throw error;
-    return data;
-  },
-
-  async deleteMensaje(id) {
-    if (!supabase) throw new Error("Supabase no configurado");
-    const { error } = await supabase.from('mensajes_jardin').delete().eq('id', id);
-    if (error) throw error;
-  }
-};
 
 // Helpers para Settings (Configuración General)
 export const settingsApi = {

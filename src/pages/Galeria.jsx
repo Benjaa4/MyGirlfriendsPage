@@ -1,25 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Image as ImageIcon, X } from 'lucide-react';
-import { multimediaApi } from '../lib/supabase';
+import { fotosApi } from '../lib/supabase';
 
 export const GaleriaView = () => {
-  const [multimedia, setMultimedia] = useState([]);
+  const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
-    const fetchMultimedia = async () => {
+    const fetchFotos = async () => {
       try {
-        const data = await multimediaApi.getMultimedia();
-        setMultimedia(data || []);
+        const data = await fotosApi.getFotos();
+        setFotos(data || []);
       } catch (error) {
-        console.error('Error fetching multimedia:', error);
-        setMultimedia([]);
+        console.error('Error fetching fotos:', error);
+        setFotos([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchMultimedia();
+    fetchFotos();
   }, []);
 
   return (
@@ -32,13 +32,13 @@ export const GaleriaView = () => {
 
       {loading ? (
         <div className="flex justify-center py-12 text-text-main/40 text-sm font-light">Cargando...</div>
-      ) : multimedia.length === 0 ? (
+      ) : fotos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 opacity-60">
           <p className="font-sans font-light text-[14px] text-text-main/70 text-center italic">El álbum de recuerdos está vacío por ahora.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
-          {multimedia.map((item) => (
+          {fotos.map((item) => (
             <div 
               key={item.id}
               onClick={() => setSelectedItem(item)}
@@ -46,7 +46,7 @@ export const GaleriaView = () => {
             >
               <img 
                 src={item.url} 
-                alt={item.descripcion || 'Recuerdo'} 
+                alt={item.description || 'Recuerdo'} 
                 className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
                 loading="lazy"
               />
@@ -73,7 +73,7 @@ export const GaleriaView = () => {
           <div className="relative w-full max-w-lg max-h-[65vh] flex items-center justify-center p-6">
             <img 
               src={selectedItem.url} 
-              alt={selectedItem.descripcion || 'Recuerdo'} 
+              alt={selectedItem.description || 'Recuerdo'} 
               className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
             />
           </div>
@@ -82,9 +82,9 @@ export const GaleriaView = () => {
             <p className="text-[10px] uppercase tracking-[0.2em] text-accent/60 mb-4">
               {new Date(selectedItem.fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
-            {selectedItem.descripcion && (
+            {selectedItem.description && (
               <p className="font-sans font-light text-text-main/80 text-[15px] leading-[1.8] italic">
-                "{selectedItem.descripcion}"
+                "{selectedItem.description}"
               </p>
             )}
           </div>
